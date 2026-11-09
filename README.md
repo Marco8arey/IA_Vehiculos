@@ -36,6 +36,7 @@ El formulario tiene las 20 preguntas en 6 secciones, está vinculado a la hoja y
 | Guía del sistema | `docs/Guia_Como_Funciona.md` |
 | Explicación sencilla | `docs/Explicacion_Sencilla.md` |
 | Cómo funciona en Sheets | `docs/Explicacion_Sheets.md` |
+| Cómo se elige k | `docs/Como_Se_Elige_K.md` |
 | Guía del formulario | `formulario/Preguntas_Formulario.md` |
 
 ---
@@ -162,6 +163,7 @@ KNN/
 │  ├─ Guia_Como_Funciona.md      Explicación completa del sistema
 │  ├─ Explicacion_Sencilla.md    Versión sin tecnicismos, para presentar
 │  ├─ Explicacion_Sheets.md      Cómo funciona la hoja, paso a paso
+│  ├─ Como_Se_Elige_K.md         Cómo se determina el valor de k
 │  ├─ Guion_Presentacion.md      Guion de 18, 10 y 5 minutos
 │  └─ Checklist_Entrega.md       Rúbrica punto por punto
 ├─ formulario/
