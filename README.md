@@ -176,7 +176,8 @@ KNN/
 │  ├─ plantilla_demo.html Plantilla de la demo
 │  └─ knn_demo.html       Demo autocontenida (generada)
 └─ datos/
-   └─ dataset_EJEMPLO_sintetico.csv    Ejemplo del formato CSV esperado (datos inventados)
+   ├─ dataset_real.csv                Dataset real (27 vehículos descritos)
+   └─ dataset_EJEMPLO_sintetico.csv   Ejemplo del formato CSV (datos inventados)
 ```
 
 ---
