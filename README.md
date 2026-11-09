@@ -34,6 +34,7 @@ El formulario tiene las 20 preguntas en 6 secciones, está vinculado a la hoja y
 | Demo interactiva (sin internet) | `web/knn_demo.html` |
 | Checklist de la rúbrica | `docs/Checklist_Entrega.md` |
 | Guía del sistema | `docs/Guia_Como_Funciona.md` |
+| Explicación sencilla | `docs/Explicacion_Sencilla.md` |
 | Guía del formulario | `formulario/Preguntas_Formulario.md` |
 
 ---
@@ -158,6 +159,7 @@ KNN/
 │  ├─ Documento_Proyecto.md      Documento completo (fuente)
 │  ├─ Documento_Proyecto.html    Listo para copiar a Google Docs
 │  ├─ Guia_Como_Funciona.md      Explicación completa del sistema
+│  ├─ Explicacion_Sencilla.md    Versión sin tecnicismos, para presentar
 │  ├─ Guion_Presentacion.md      Guion de 18, 10 y 5 minutos
 │  └─ Checklist_Entrega.md       Rúbrica punto por punto
 ├─ formulario/
