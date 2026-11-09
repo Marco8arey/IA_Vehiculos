@@ -38,6 +38,7 @@ El formulario tiene las 20 preguntas en 6 secciones, está vinculado a la hoja y
 | Cómo funciona en Sheets | `docs/Explicacion_Sheets.md` |
 | Cómo se elige k | `docs/Como_Se_Elige_K.md` |
 | Cómo funciona el código | `docs/Como_Funciona_El_Codigo.md` |
+| Código completo (9 archivos) | `docs/Codigo_AppScript.md` |
 | Guía del formulario | `formulario/Preguntas_Formulario.md` |
 
 ---
@@ -166,6 +167,7 @@ KNN/
 │  ├─ Explicacion_Sheets.md      Cómo funciona la hoja, paso a paso
 │  ├─ Como_Se_Elige_K.md         Cómo se determina el valor de k
 │  ├─ Como_Funciona_El_Codigo.md Recorrido del código, archivo por archivo
+│  ├─ Codigo_AppScript.md        Los 9 archivos .gs completos
 │  ├─ Guion_Presentacion.md      Guion de 18, 10 y 5 minutos
 │  └─ Checklist_Entrega.md       Rúbrica punto por punto
 ├─ formulario/
