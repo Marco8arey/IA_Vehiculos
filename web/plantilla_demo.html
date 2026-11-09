@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KNN — Clasificador de vehículos</title>
+<style>
+  :root {
+    --azul: #1F3864;
+    --azul2: #2F5597;
+    --azul3: #8EA9DB;
+    --fondo: #F4F6FA;
+    --blanco: #FFFFFF;
+    --texto: #1F2430;
+    --gris: #6B7280;
+    --verde: #2E7D5B;
+    --rojo: #B3261E;
+    --amarillo: #B98900;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    background: var(--fondo);
+    color: var(--texto);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  header {
+    background: linear-gradient(135deg, #1F3864 0%, #2F5597 100%);
+    color: white;
+    padding: 22px 28px 18px;
+  }
+  header h1 { margin: 0 0 4px; font-size: 21px; font-weight: 600; letter-spacing: .2px; }
+  header p { margin: 0; opacity: .85; font-size: 13px; }
+  main { max-width: 1240px; margin: 0 auto; padding: 18px 20px 60px; }
+
+  .rejilla { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+  .tarjeta {
+    background: var(--blanco);
+    border: 1px solid #E2E6EF;
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+  }
+  .tarjeta h2 {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--azul);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+  .tarjeta h3 { margin: 14px 0 8px; font-size: 13px; color: var(--azul2); }
+  .c12 { grid-column: span 12; }
+  .c8 { grid-column: span 8; }
+  .c7 { grid-column: span 7; }
+  .c6 { grid-column: span 6; }
+  .c5 { grid-column: span 5; }
+  .c4 { grid-column: span 4; }
+  @media (max-width: 980px) {
+    .c8, .c7, .c6, .c5, .c4 { grid-column: span 12; }
+  }
+
+  .controles { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+  .campo { display: flex; flex-direction: column; gap: 4px; }
+  .campo label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--gris); font-weight: 600; }
+  input[type="number"], select {
+    padding: 7px 9px; border: 1px solid #CBD2E0; border-radius: 6px; font-size: 13px;
+    background: white; color: var(--texto); min-width: 84px;
+  }
+  input[type="range"] { width: 128px; accent-color: var(--azul2); }
+  button {
+    padding: 8px 14px; border-radius: 6px; border: 1px solid var(--azul2);
+    background: var(--azul2); color: white; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background .12s;
+  }
+  button:hover { background: var(--azul); }
+  button.secundario { background: white; color: var(--azul2); }
+  button.secundario:hover { background: #EEF2FA; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+
+  .metrica { text-align: center; padding: 10px 6px; }
+  .metrica .valor { font-size: 30px; font-weight: 700; color: var(--azul); line-height: 1.1; }
+  .metrica .etiqueta { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--gris); margin-top: 4px; }
+  .metricas-fila { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 6px 8px; border: 1px solid #E2E6EF; text-align: left; }
+  th { background: #EDF1F9; font-weight: 600; color: var(--azul); font-size: 12px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tabla-scroll { max-height: 320px; overflow: auto; border-radius: 8px; }
+  .tabla-scroll thead th { position: sticky; top: 0; z-index: 1; }
+
+  .matriz td { text-align: center; font-variant-numeric: tabular-nums; }
+  .matriz th { text-align: center; }
+  .matriz td.diag { font-weight: 700; }
+  .matriz td.fila-cab, .matriz th.fila-cab { text-align: left; font-weight: 600; background: #F7F9FC; }
+
+  .etiqueta-clase {
+    display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px;
+  }
+
+  .resultado-prediccion { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .clase-grande { font-size: 26px; font-weight: 700; color: var(--azul); }
+  .vecinos { list-style: none; padding: 0; margin: 8px 0 0; font-size: 12.5px; }
+  .vecinos li { display: flex; justify-content: space-between; padding: 4px 8px; border-radius: 5px; }
+  .vecinos li:nth-child(odd) { background: #F7F9FC; }
+
+  .barra { height: 8px; background: #EDF1F9; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .barra > div { height: 100%; background: var(--azul3); }
+
+  .nota { font-size: 12px; color: var(--gris); margin-top: 10px; }
+  .aviso {
+    background: #FFF7E6; border: 1px solid #F1D9A6; color: #7A5B00;
+    padding: 10px 12px; border-radius: 8px; font-size: 12.5px;
+  }
+  .chip {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; background: #EDF1F9; color: var(--azul2);
+  }
+  .oculto { display: none !important; }
+  svg text { font-family: inherit; }
+  #grafica { width: 100%; height: 360px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Clasificador KNN de tipos de vehículo</h1>
+  <p>Demostración interactiva · Proyecto de Inteligencia Artificial · funciona sin conexión</p>
+</header>
+
+<main>
+  <div class="rejilla">
+
+    <!-- Controles -->
+    <section class="tarjeta c12">
+      <h2>1 · Datos y parámetros</h2>
+      <div class="controles">
+        <div class="campo">
+          <label for="n">Vehículos</label>
+          <input type="number" id="n" value="60" min="20" max="400" step="5">
+        </div>
+        <div class="campo">
+          <label for="semilla">Semilla</label>
+          <input type="number" id="semilla" value="2026" min="1" max="99999">
+        </div>
+        <div class="campo">
+          <label for="prop">Prueba (%)</label>
+          <input type="number" id="prop" value="30" min="15" max="40" step="5">
+        </div>
+        <div class="campo">
+          <label for="k">k <span id="k-valor" class="chip">5</span></label>
+          <input type="range" id="k" value="5" min="1" max="15" step="2">
+        </div>
+        <button id="btn-ejecutar">Ejecutar análisis</button>
+        <button id="btn-demo" class="secundario">Regenerar datos</button>
+        <label class="campo">
+          <span style="font-size:11px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Cargar CSV real</span>
+          <input type="file" id="archivo" accept=".csv" style="font-size:12px">
+        </label>
+      </div>
+      <p class="nota" id="origen-datos">Datos sintéticos de demostración. Carga tu CSV real para trabajar con las descripciones de vehículos de la encuesta.</p>
+    </section>
+
+    <!-- Métricas -->
+    <section class="tarjeta c12">
+      <h2>2 · Resultados de la evaluación</h2>
+      <div class="metricas-fila" id="metricas"></div>
+      <p class="nota" id="resumen-particion"></p>
+    </section>
+
+    <!-- Matriz de confusión -->
+    <section class="tarjeta c7">
+      <h2>3 · Matriz de confusión</h2>
+      <p class="nota" style="margin-top:0">Filas: clase real. Columnas: clase predicha (validación cruzada de 5 particiones).</p>
+      <div id="matriz"></div>
+      <p class="nota">La diagonal son los aciertos. Cada celda fuera de la diagonal indica que esa clase real fue clasificada como otra.</p>
+    </section>
+
+    <!-- Métricas por clase -->
+    <section class="tarjeta c5">
+      <h2>4 · Métricas por clase</h2>
+      <div id="tabla-clases"></div>
+      <p class="nota">Precisión: cuando el modelo dice "es X", ¿cuántas veces acierta? Recall: de los X reales, ¿cuántos encuentra? F1: equilibrio entre ambas.</p>
+    </section>
+
+    <!-- Selección de k -->
+    <section class="tarjeta c5">
+      <h2>5 · Selección de k</h2>
+      <div id="tabla-k"></div>
+      <p class="nota">Exactitud interna calculada con leave-one-out sobre el conjunto de entrenamiento (no usa los datos de prueba).</p>
+    </section>
+
+    <!-- Predicción -->
+    <section class="tarjeta c7">
+      <h2>6 · Predicción en vivo</h2>
+      <div id="sliders" style="display:grid;grid-template-columns:1fr 1fr;gap:10px 18px"></div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+        <button id="btn-predecir">Clasificar este vehículo</button>
+        <button id="btn-aleatorio" class="secundario">Vehículo aleatorio</button>
+      </div>
+      <div id="prediccion" style="margin-top:16px"></div>
+    </section>
+
+    <!-- Gráfica -->
+    <section class="tarjeta c12">
+      <h2>7 · Distribución de los datos</h2>
+      <div class="controles" style="margin-bottom:10px">
+        <div class="campo">
+          <label for="eje-x">Eje X</label>
+          <select id="eje-x"></select>
+        </div>
+        <div class="campo">
+          <label for="eje-y">Eje Y</label>
+          <select id="eje-y"></select>
+        </div>
+        <div class="campo" id="leyenda" style="flex-direction:row;gap:12px;align-items:center;flex-wrap:wrap"></div>
+      </div>
+      <svg id="grafica" viewBox="0 0 900 360" preserveAspectRatio="xMidYMid meet"></svg>
+      <p class="nota">Cada punto es un vehículo descrito en la encuesta. Si las categorías forman grupos separados, KNN puede distinguirlas con facilidad.</p>
+    </section>
+
+    <!-- Dataset -->
+    <section class="tarjeta c12">
+      <h2>8 · Conjunto de datos preparado</h2>
+      <div class="tabla-scroll" id="tabla-datos"></div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+/* ============================================================================
+ *  CÓDIGO EMBEBIDO: esquema.js + knn_core.js
+ *  Se inyectan automáticamente al generar este archivo (node src/build.mjs).
+ *  No editar aquí: editar src/esquema.js o src/knn_core.js y reconstruir.
+ * ==========================================================================*/
+/*__ESQUEMA__*/
+
+/*__KNN_CORE__*/
+
+/* ============================================================================
+ *  APLICACIÓN DE DEMOSTRACIÓN
+ * ==========================================================================*/
+(function () {
+  'use strict';
+
+  var COLORES = {
+    'Hatchback': '#2F5597',
+    'Sedán': '#2E7D5B',
+    'SUV': '#B98900',
+    'Pick-up': '#B3261E',
+    'Van': '#7030A0'
+  };
+
+  var estado = {
+    datos: [],
+    modelo: null,
+    resultado: null,
+    cv: null,
+    seleccion: null,
+    particion: null,
+    k: 5,
+    sintetico: true
+  };
+
+  function $(id) { return document.getElementById(id); }
+
+  function fmtPorcentaje(x) { return (x * 100).toFixed(1) + '%'; }
+  function fmt(x, d) { return Number(x).toFixed(d === undefined ? 2 : d); }
+
+  /* ---------------------------------------------------------------- */
+  /* Carga de datos                                                    */
+  /* ---------------------------------------------------------------- */
+  function generarDemo(n, semilla) {
+    var respuestas = generarRespuestasSinteticas(n, semilla, 0.06);
+    var datos = [];
+    for (var i = 0; i < respuestas.length; i++) {
+      var fila = mapearRespuesta(respuestas[i], i);
+      if (!fila.error) datos.push(fila);
+    }
+    return datos;
+  }
+
+  function leerCSV(texto) {
+    // Parser sencillo que respeta comillas dobles.
+    var filas = [];
+    var campo = '', fila = [], entreComillas = false;
+
+    for (var i = 0; i < texto.length; i++) {
+      var c = texto[i];
+      if (entreComillas) {
+        if (c === '"') {
+          if (texto[i + 1] === '"') { campo += '"'; i++; }
+          else entreComillas = false;
+        } else campo += c;
+      } else {
+        if (c === '"') entreComillas = true;
+        else if (c === ',') { fila.push(campo); campo = ''; }
+        else if (c === '\n') { fila.push(campo); filas.push(fila); fila = []; campo = ''; }
+        else if (c === '\r') { /* ignora */ }
+        else campo += c;
+      }
+    }
+    if (campo !== '' || fila.length) { fila.push(campo); filas.push(fila); }
+
+    var encabezados = filas.shift().map(function (h) { return h.trim(); });
+    var datos = [];
+
+    filas.forEach(function (f, idx) {
+      if (!f.length || (f.length === 1 && !f[0].trim())) return;
+      var obj = { id: 'R' + String(idx + 1).padStart(3, '0') };
+      encabezados.forEach(function (h, j) {
+        var valor = (f[j] === undefined ? '' : f[j]).trim();
+        if (h === 'clase' || h === 'Clase' || h === 'Clase (variable objetivo)') {
+          obj.claseNormalizada = valor;
+        } else if (h === 'id' || h === 'ID') {
+          if (valor) obj.id = valor;
+        } else if (FEATURES.some(function (x) { return x.id === h; })) {
+          obj[h] = Number(valor);
+        }
+      });
+      // Normaliza el nombre de la clase
+      var c = normalizarTexto(obj.claseNormalizada || '');
+      if (c.indexOf('hatchback') !== -1) obj.clase = 'Hatchback';
+      else if (c.indexOf('sedan') !== -1) obj.clase = 'Sedán';
+      else if (c.indexOf('suv') !== -1) obj.clase = 'SUV';
+      else if (c.indexOf('pick') !== -1) obj.clase = 'Pick-up';
+      else if (c.indexOf('van') !== -1) obj.clase = 'Van';
+      else return;
+
+      var completo = FEATURES.every(function (x) { return isFinite(obj[x.id]); });
+      if (completo) datos.push(obj);
+    });
+
+    return datos;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Ejecución del pipeline                                            */
+  /* ---------------------------------------------------------------- */
+  function ejecutar() {
+    if (estado.datos.length < 10) {
+      alert('Se necesitan al menos 10 registros para ejecutar el análisis.');
+      return;
+    }
+
+    var prop = Number($('prop').value) / 100;
+    var semilla = Number($('semilla').value) || 1;
+
+    estado.particion = dividirEstratificado(estado.datos, prop, semilla, 'clase');
+    estado.seleccion = elegirMejorK(estado.particion.entrenamiento, FEATURES, [1, 3, 5, 7, 9, 11]);
+
+    // Si el usuario movió el control de k, se respeta; si no, se usa el mejor k.
+    if (!estado.kManual) {
+      estado.k = estado.seleccion.mejorK;
+      $('k').value = estado.k;
+      $('k-valor').textContent = estado.k;
+    }
+
+    estado.resultado = evaluarConjuntoPrueba(
+      estado.particion.entrenamiento, estado.particion.prueba, FEATURES, estado.k
+    );
+    estado.modelo = estado.resultado.modelo;
+
+    var folds = Math.max(2, Math.min(5, estado.datos.length));
+    estado.cv = evaluarValidacionCruzada(estado.datos, FEATURES, estado.k, folds, semilla);
+
+    renderizarTodo();
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Render                                                            */
+  /* ---------------------------------------------------------------- */
+  function renderizarTodo() {
+    renderMetricas();
+    renderMatriz();
+    renderClases();
+    renderTablaK();
+    renderSliders();
+    renderGrafica();
+    renderTablaDatos();
+    $('resumen-particion').textContent =
+      'Entrenamiento: ' + estado.particion.entrenamiento.length + ' registros · ' +
+      'Prueba: ' + estado.particion.prueba.length + ' registros · ' +
+      'k = ' + estado.k + ' · ' +
+      estado.datos.length + ' registros totales.';
+  }
+
+  function renderMetricas() {
+    var mH = estado.resultado.metricas;
+    var mC = estado.cv.metricas;
+
+    var tarjetas = [
+      { valor: fmtPorcentaje(mC.exactitud), etiqueta: 'Exactitud (cruzada)' },
+      { valor: fmtPorcentaje(mC.macroF1), etiqueta: 'Macro-F1' },
+      { valor: fmt(mC.kappa, 3), etiqueta: 'Kappa de Cohen' },
+      { valor: fmtPorcentaje(mH.exactitud), etiqueta: 'Exactitud (prueba)' }
+    ];
+
+    $('metricas').innerHTML = tarjetas.map(function (t) {
+      return '<div class="metrica"><div class="valor">' + t.valor +
+        '</div><div class="etiqueta">' + t.etiqueta + '</div></div>';
+    }).join('');
+  }
+
+  function renderMatriz() {
+    var m = estado.cv;
+    var max = 1;
+    m.matriz.forEach(function (f) { f.forEach(function (v) { max = Math.max(max, v); }); });
+
+    var html = '<table class="matriz"><thead><tr><th class="fila-cab">Real ↓ / Predicho →</th>';
+    m.clases.forEach(function (c) { html += '<th>' + c + '</th>'; });
+    html += '<th>Total</th></tr></thead><tbody>';
+
+    m.clases.forEach(function (c, i) {
+      html += '<tr><td class="fila-cab">' + c + '</td>';
+      var total = 0;
+      m.clases.forEach(function (_, j) {
+        var v = m.matriz[i][j];
+        total += v;
+        var intensidad = v === 0 ? 0 : 0.12 + 0.6 * (v / max);
+        var fondo = i === j
+          ? 'background: rgba(46,125,91,' + (intensidad + 0.1) + ')'
+          : 'background: rgba(179,38,30,' + intensidad + ')';
+        html += '<td class="' + (i === j ? 'diag' : '') + '" style="' + fondo + '">' + v + '</td>';
+      });
+      html += '<td style="background:#F2F2F2;font-weight:600">' + total + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    $('matriz').innerHTML = html;
+  }
+
+  function renderClases() {
+    var m = estado.cv.metricas;
+    var html = '<table><thead><tr><th>Clase</th><th class="num">n</th><th class="num">Prec.</th>' +
+      '<th class="num">Recall</th><th class="num">F1</th></tr></thead><tbody>';
+    m.porClase.forEach(function (c) {
+      html += '<tr><td><span class="etiqueta-clase" style="background:' + (COLORES[c.clase] || '#888') +
+        '"></span>' + c.clase + '</td>' +
+        '<td class="num">' + c.soporte + '</td>' +
+        '<td class="num">' + fmtPorcentaje(c.precision) + '</td>' +
+        '<td class="num">' + fmtPorcentaje(c.recall) + '</td>' +
+        '<td class="num"><strong>' + fmtPorcentaje(c.f1) + '</strong></td></tr>';
+    });
+    html += '</tbody></table>';
+    $('tabla-clases').innerHTML = html;
+  }
+
+  function renderTablaK() {
+    var tabla = estado.seleccion.tabla;
+    var html = '<table><thead><tr><th class="num">k</th><th class="num">Exactitud LOO</th></tr></thead><tbody>';
+    tabla.forEach(function (t) {
+      var destacado = t.k === estado.k ? ' style="background:#E4F1E9;font-weight:700"' : '';
+      html += '<tr' + destacado + '><td class="num">' + t.k + '</td><td class="num">' +
+        fmtPorcentaje(t.exactitud) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    $('tabla-k').innerHTML = html;
+  }
+
+  function renderSliders() {
+    var contenedor = $('sliders');
+
+    // Conserva los valores que el usuario ya había elegido
+    var previos = {};
+    estado.modelo.spec.forEach(function (spec) {
+      var existente = $('in-' + spec.id);
+      if (existente) previos[spec.id] = Number(existente.value);
+    });
+
+    contenedor.innerHTML = '';
+
+    estado.modelo.spec.forEach(function (spec, i) {
+      var f = FEATURES[i];
+      var div = document.createElement('div');
+      var valorInicial = previos[spec.id] !== undefined
+        ? previos[spec.id]
+        : Math.round((spec.min + spec.max) / 2);
+
+      div.innerHTML =
+        '<label style="font-size:12px;color:#4B5563;display:flex;justify-content:space-between">' +
+        '<span>' + f.etiqueta + '</span>' +
+        '<strong id="val-' + spec.id + '">' + valorInicial + '</strong></label>';
+
+      var input = document.createElement('input');
+      input.type = 'range';
+      input.min = spec.min;
+      input.max = spec.max;
+      input.step = 1;
+      input.value = valorInicial;
+      input.id = 'in-' + spec.id;
+      input.style.width = '100%';
+      input.style.accentColor = '#2F5597';
+      input.addEventListener('input', function () {
+        $('val-' + spec.id).textContent = this.value;
+      });
+
+      div.appendChild(input);
+      contenedor.appendChild(div);
+    });
+  }
+
+  function perfilDesdeSliders() {
+    var perfil = {};
+    estado.modelo.spec.forEach(function (spec) {
+      perfil[spec.id] = Number($('in-' + spec.id).value);
+    });
+    return perfil;
+  }
+
+  function predecir() {
+    var perfil = perfilDesdeSliders();
+    var p = predecirKNN(estado.modelo, perfil, estado.k);
+    var color = COLORES[p.clase] || '#333';
+
+    var html = '<div class="resultado-prediccion">' +
+      '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#6B7280">Clase predicha</div>' +
+      '<div class="clase-grande" style="color:' + color + '">' + p.clase + '</div>' +
+      '<div class="nota">Vecinos consultados: ' + p.k + ' · distancia promedio: ' +
+      fmt(p.distanciaPromedio, 3) + '</div></div>' +
+      '<div style="flex:1;min-width:240px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#6B7280;margin-bottom:6px">Votación ponderada</div>';
+
+    var total = Object.keys(p.votos).reduce(function (a, k) { return a + p.votos[k]; }, 0);
+    Object.keys(p.votos).sort(function (a, b) { return p.votos[b] - p.votos[a]; }).forEach(function (clase) {
+      var pct = total ? p.votos[clase] / total : 0;
+      html += '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:12px">' +
+        '<span>' + clase + '</span><span>' + fmtPorcentaje(pct) + '</span></div>' +
+        '<div class="barra"><div style="width:' + (pct * 100) + '%;background:' +
+        (COLORES[clase] || '#888') + '"></div></div></div>';
+    });
+    html += '</div></div>';
+
+    html += '<h3>Los ' + p.k + ' vecinos más cercanos</h3><ul class="vecinos">';
+    p.vecinos.forEach(function (v) {
+      html += '<li><span><span class="etiqueta-clase" style="background:' + (COLORES[v.clase] || '#888') +
+        '"></span>' + v.clase + '</span><span style="font-variant-numeric:tabular-nums;color:#6B7280">d = ' +
+        fmt(v.distancia, 4) + '</span></li>';
+    });
+    html += '</ul>';
+
+    $('prediccion').innerHTML = html;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Gráfica de dispersión                                             */
+  /* ---------------------------------------------------------------- */
+  function renderSelectores() {
+    var x = $('eje-x'), y = $('eje-y');
+    x.innerHTML = ''; y.innerHTML = '';
+    FEATURES.forEach(function (f, i) {
+      x.appendChild(new Option(f.etiqueta, i));
+      y.appendChild(new Option(f.etiqueta, i));
+    });
+    x.value = 0;
+    y.value = 1;
+
+    var leyenda = $('leyenda');
+    leyenda.innerHTML = CLASES.map(function (c) {
+      return '<span style="font-size:12px"><span class="etiqueta-clase" style="background:' +
+        COLORES[c] + '"></span>' + c + '</span>';
+    }).join('');
+  }
+
+  function renderGrafica() {
+    var svg = $('grafica');
+    var ancho = 900, alto = 360;
+    var margen = { izq: 60, der: 20, arr: 16, aba: 46 };
+
+    var ix = Number($('eje-x').value);
+    var iy = Number($('eje-y').value);
+    var fx = FEATURES[ix], fy = FEATURES[iy];
+
+    var xs = estado.datos.map(function (d) { return Number(d[fx.id]); });
+    var ys = estado.datos.map(function (d) { return Number(d[fy.id]); });
+    var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+    var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+    if (maxX === minX) maxX = minX + 1;
+    if (maxY === minY) maxY = minY + 1;
+
+    var anchoUtil = ancho - margen.izq - margen.der;
+    var altoUtil = alto - margen.arr - margen.aba;
+
+    function px(v) { return margen.izq + ((v - minX) / (maxX - minX)) * anchoUtil; }
+    function py(v) { return margen.arr + altoUtil - ((v - minY) / (maxY - minY)) * altoUtil; }
+
+    var partes = [];
+
+    // Rejilla y ejes
+    for (var g = 0; g <= 4; g++) {
+      var vy = minY + (maxY - minY) * g / 4;
+      var yPos = py(vy);
+      partes.push('<line x1="' + margen.izq + '" y1="' + yPos + '" x2="' + (ancho - margen.der) +
+        '" y2="' + yPos + '" stroke="#EDF1F9" stroke-width="1"/>');
+      partes.push('<text x="' + (margen.izq - 8) + '" y="' + (yPos + 4) +
+        '" text-anchor="end" font-size="11" fill="#6B7280">' + Math.round(vy) + '</text>');
+
+      var vx = minX + (maxX - minX) * g / 4;
+      var xPos = px(vx);
+      partes.push('<text x="' + xPos + '" y="' + (alto - margen.aba + 18) +
+        '" text-anchor="middle" font-size="11" fill="#6B7280">' + Math.round(vx) + '</text>');
+    }
+
+    partes.push('<line x1="' + margen.izq + '" y1="' + (alto - margen.aba) + '" x2="' + (ancho - margen.der) +
+      '" y2="' + (alto - margen.aba) + '" stroke="#CBD2E0"/>');
+    partes.push('<line x1="' + margen.izq + '" y1="' + margen.arr + '" x2="' + margen.izq +
+      '" y2="' + (alto - margen.aba) + '" stroke="#CBD2E0"/>');
+
+    partes.push('<text x="' + (ancho / 2) + '" y="' + (alto - 8) +
+      '" text-anchor="middle" font-size="12" fill="#4B5563">' + fx.etiqueta + '</text>');
+    partes.push('<text x="14" y="' + (alto / 2) + '" text-anchor="middle" font-size="12" fill="#4B5563" ' +
+      'transform="rotate(-90 14 ' + (alto / 2) + ')">' + fy.etiqueta + '</text>');
+
+    // Puntos con un pequeño desplazamiento para que no se superpongan
+    var rng = crearPRNG(7);
+    estado.datos.forEach(function (d) {
+      var x = px(Number(d[fx.id])) + (rng() - 0.5) * 10;
+      var y = py(Number(d[fy.id])) + (rng() - 0.5) * 10;
+      partes.push('<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) +
+        '" r="5" fill="' + (COLORES[d.clase] || '#888') + '" fill-opacity="0.75" stroke="white" stroke-width="1">' +
+        '<title>' + d.id + ' · ' + d.clase + '</title></circle>');
+    });
+
+    svg.innerHTML = partes.join('');
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Tabla de datos                                                    */
+  /* ---------------------------------------------------------------- */
+  function renderTablaDatos() {
+    var columnas = ['id', 'clase'].concat(FEATURES.map(function (f) { return f.id; }));
+    var html = '<table><thead><tr>' + columnas.map(function (c) {
+      var f = FEATURES.filter(function (x) { return x.id === c; })[0];
+      var titulo = c === 'id' ? 'ID' : c === 'clase' ? 'Clase' : (f ? f.etiqueta : c);
+      return '<th title="' + c + '">' + titulo + '</th>';
+    }).join('') + '</tr></thead><tbody>';
+
+    estado.datos.forEach(function (d) {
+      html += '<tr>' + columnas.map(function (c) {
+        if (c === 'clase') {
+          return '<td><span class="etiqueta-clase" style="background:' + (COLORES[d[c]] || '#888') +
+            '"></span>' + d[c] + '</td>';
+        }
+        return '<td class="' + (c === 'id' ? '' : 'num') + '">' + d[c] + '</td>';
+      }).join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+    $('tabla-datos').innerHTML = html;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Eventos                                                           */
+  /* ---------------------------------------------------------------- */
+  function reiniciarConDemo() {
+    var n = Number($('n').value) || 60;
+    var semilla = Number($('semilla').value) || 2026;
+    estado.datos = generarDemo(n, semilla);
+    estado.sintetico = true;
+    estado.kManual = false;
+    $('origen-datos').textContent = 'Datos sintéticos de demostración (' + estado.datos.length +
+      ' vehículos descritos). Carga tu CSV real para trabajar con las descripciones de la encuesta.';
+    ejecutar();
+  }
+
+  $('btn-ejecutar').addEventListener('click', function () {
+    estado.kManual = true;
+    ejecutar();
+  });
+
+  $('btn-demo').addEventListener('click', reiniciarConDemo);
+
+  $('k').addEventListener('input', function () {
+    estado.k = Number(this.value);
+    estado.kManual = true;
+    $('k-valor').textContent = estado.k;
+    if (estado.modelo) ejecutar();
+  });
+
+  $('eje-x').addEventListener('change', renderGrafica);
+  $('eje-y').addEventListener('change', renderGrafica);
+
+  $('btn-predecir').addEventListener('click', predecir);
+
+  $('btn-aleatorio').addEventListener('click', function () {
+    var rng = crearPRNG(Date.now() % 100000);
+    estado.modelo.spec.forEach(function (spec) {
+      var valor = spec.min + Math.floor(rng() * (spec.max - spec.min + 1));
+      $('in-' + spec.id).value = valor;
+      $('val-' + spec.id).textContent = valor;
+    });
+    predecir();
+  });
+
+  $('archivo').addEventListener('change', function (e) {
+    var archivo = e.target.files[0];
+    if (!archivo) return;
+    var lector = new FileReader();
+    lector.onload = function () {
+      var datos = leerCSV(lector.result);
+      if (datos.length < 10) {
+        alert('El CSV debe tener al menos 10 filas válidas y las columnas ' +
+          FEATURES.map(function (f) { return f.id; }).join(', ') + ' y clase.');
+        return;
+      }
+      estado.datos = datos;
+      estado.sintetico = false;
+      estado.kManual = false;
+      $('origen-datos').textContent = 'Datos cargados desde "' + archivo.name + '" (' +
+        datos.length + ' registros válidos).';
+      ejecutar();
+    };
+    lector.readAsText(archivo, 'utf-8');
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* Arranque                                                          */
+  /* ---------------------------------------------------------------- */
+  renderSelectores();
+  reiniciarConDemo();
+  setTimeout(predecir, 100);
+})();
+</script>
+</body>
+</html>

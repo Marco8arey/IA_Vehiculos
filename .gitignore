@@ -1,0 +1,18 @@
+# Sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Temporales y respaldos
+*.tmp
+*.bak
+*.zip
+*.log
+
+# Editores
+.vscode/
+.idea/

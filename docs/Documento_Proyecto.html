@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Documento del proyecto KNN</title>
+<style>
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #222222;
+    max-width: 820px;
+    margin: 40px auto;
+    padding: 0 24px;
+  }
+  h1 {
+    font-size: 20pt;
+    color: #1F3864;
+    margin: 28px 0 10px;
+    line-height: 1.25;
+  }
+  h2 {
+    font-size: 15pt;
+    color: #1F3864;
+    border-bottom: 2px solid #8EA9DB;
+    padding-bottom: 4px;
+    margin: 30px 0 12px;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #2F5597;
+    margin: 20px 0 8px;
+  }
+  p { margin: 0 0 10px; text-align: justify; }
+  ul, ol { margin: 0 0 12px 0; padding-left: 26px; }
+  li { margin-bottom: 5px; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0 18px;
+    font-size: 9.5pt;
+  }
+  th {
+    background: #D9E2F3;
+    border: 1px solid #8EA9DB;
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: middle;
+  }
+  td {
+    border: 1px solid #BFBFBF;
+    padding: 5px 8px;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #FAFAFA; }
+  code {
+    font-family: Consolas, 'Courier New', monospace;
+    background: #F2F2F2;
+    padding: 1px 4px;
+    font-size: 9.5pt;
+  }
+  hr { border: none; border-top: 1px solid #BFBFBF; margin: 24px 0; }
+  blockquote {
+    border-left: 3px solid #8EA9DB;
+    margin: 12px 0;
+    padding: 6px 14px;
+    background: #F7F9FC;
+  }
+  .mat { font-family: 'Cambria Math', Georgia, serif; font-style: italic; }
+  .ph {
+    background: #FFF2CC;
+    color: #B45F06;
+    font-weight: bold;
+  }
+  strong { color: #1F3864; }
+  td strong { color: inherit; }
+</style>
+</head>
+<body>
+<h1>Clasificación automática de vehículos mediante KNN a partir de sus características</h1>
+<p><strong>Materia:</strong> Inteligencia Artificial</p>
+<p><strong>Profesor:</strong> <span class="ph">{{NOMBRE_PROFESOR}}</span></p>
+<p><strong>Equipo:</strong> <span class="ph">{{NOMBRE_INTEGRANTE_1}}</span>, <span class="ph">{{NOMBRE_INTEGRANTE_2}}</span>, <span class="ph">{{NOMBRE_INTEGRANTE_3}}</span></p>
+<p><strong>Institución:</strong> <span class="ph">{{INSTITUCIÓN}}</span></p>
+<p><strong>Fecha:</strong> <span class="ph">{{FECHA_ENTREGA}}</span></p>
+<hr>
+<blockquote><strong>BORRAR ESTE RECUADRO ANTES DE ENTREGAR.</strong> Cómo completar el documento (3 pasos, 2 minutos):<br><br>1. Pega este documento en Google Docs y ejecuta el análisis en la hoja de cálculo.<br><br>2. En la hoja: menú <strong>KNN Vehículos → 4. Completar documento con mis datos</strong> y pega la URL de este documento. El script sustituye los marcadores de datos reales.<br><br>3. Escribe a mano los 9 datos del equipo (nombres, profesor, institución, fechas). Son los únicos que quedan en amarillo.<br><br><br><br>Los marcadores aparecen resaltados en amarillo solo mientras no tengan valor.</blockquote>
+<hr>
+<h2>Resumen</h2>
+<p>Este proyecto aplica el algoritmo de los <em>k vecinos más cercanos</em> (KNN) para identificar la categoría de un vehículo —Hatchback, Sedán, SUV, Pick-up o Van— a partir de características observables: número de asientos, filas, longitud, altura del techo, altura al suelo, capacidad de carga, tipo de área trasera, tracción, potencia, rendimiento y uso. El conjunto de datos se construyó con descripciones de vehículos reales obtenidas directamente de personas mediante un formulario de Google Forms; no se utilizó ninguna base de datos externa. Se recolectaron <span class="ph">{{TOTAL_RESPUESTAS}}</span> descripciones, de las cuales <span class="ph">{{VALIDAS}}</span> fueron válidas y se transformaron en 14 variables numéricas. El modelo se evaluó con una partición estratificada 70/30 y con validación cruzada de 5 particiones, con una exactitud de <span class="ph">{{EXACTITUD_CV}}</span> en la validación cruzada. El análisis de la matriz de confusión permitió identificar qué categorías se confunden entre sí y por qué.</p>
+<hr>
+<h2>1. Planteamiento del problema</h2>
+<h3>1.1 Contexto</h3>
+<p>Clasificar un vehículo parece una tarea trivial para una persona: basta mirarlo. Pero cuando hay que hacerlo de forma masiva y automática —para un inventario, una aseguradora, un estacionamiento, una plataforma de venta o un sistema de peaje— la tarea deja de ser trivial. Dos observadores pueden llamar "camioneta" a cosas distintas, y una SUV de siete asientos se parece mucho a una Van.</p>
+<p>Desde el punto de vista de la Inteligencia Artificial, este es un problema de <strong>clasificación supervisada</strong>: existen características medibles de un vehículo (número de asientos, altura, capacidad de carga, tracción) y una etiqueta que queremos predecir (su categoría). Si un modelo aprende la relación entre características y categoría a partir de ejemplos descritos por personas, puede clasificar un vehículo nuevo usando solo sus características.</p>
+<h3>1.2 Pregunta de investigación</h3>
+<p>¿Es posible identificar la categoría de un vehículo —Hatchback, Sedán, SUV, Pick-up o Van— a partir de un conjunto de características físicas y de uso descritas por una persona, utilizando el algoritmo KNN?</p>
+<h3>1.3 Hipótesis</h3>
+<p>Las características observables de un vehículo contienen información suficiente para identificar su categoría con una exactitud superior al 75 %, un valor muy por encima del azar (20 % con cinco clases balanceadas).</p>
+<h3>1.4 Objetivo general</h3>
+<p>Construir, entrenar y evaluar un clasificador basado en el algoritmo KNN, implementado en JavaScript, que identifique la categoría de un vehículo a partir de sus características descritas en una encuesta.</p>
+<h3>1.5 Objetivos específicos</h3>
+<ol><li>Diseñar un instrumento que permita describir un vehículo real con preguntas claras y observables.</li><li>Recolectar un mínimo de 60 descripciones de vehículos mediante Google Forms, sin recurrir a bases de datos externas.</li><li>Preparar el conjunto de datos: codificar respuestas de texto a valores numéricos, validar registros y normalizar las variables.</li><li>Implementar el algoritmo KNN desde cero en JavaScript, incluyendo distancia, votación, partición de datos y métricas de evaluación.</li><li>Evaluar el modelo con una partición entrenamiento/prueba y con validación cruzada estratificada.</li><li>Analizar la matriz de confusión para identificar patrones de error y explicar sus causas.</li><li>Documentar todo el proceso de forma reproducible, incluyendo el código y los parámetros utilizados.</li></ol>
+<h3>1.6 Justificación</h3>
+<p><strong>Académica:</strong> permite recorrer el ciclo completo de un proyecto de aprendizaje automático —definición del problema, diseño del instrumento, recolección, limpieza, entrenamiento, evaluación e interpretación— con un problema intuitivo y verificable.</p>
+<p><strong>Práctica:</strong> la clasificación automática de vehículos es la base de sistemas de inventario, cotización de seguros, control de accesos, peajes por categoría y plataformas de compraventa.</p>
+<p><strong>Metodológica:</strong> el problema tiene una particularidad valiosa: la etiqueta la declara una persona, pero el modelo <strong>no puede usarla como entrada</strong>. Debe aprender a deducirla de las características. Esto obliga a distinguir con claridad entre variable objetivo y variables predictoras, que es uno de los conceptos centrales del curso.</p>
+<h3>1.7 Alcance y limitaciones</h3>
+<p>El alcance incluye cinco categorías de vehículo y 14 variables predictoras obtenidas de descripciones de personas. <strong>No</strong> se identifican marcas, modelos ni precios, y no se pretende construir un sistema comercial.</p>
+<p>Las limitaciones se declaran desde el inicio: la muestra es pequeña y se obtiene por conveniencia; la categoría la declara la persona que describe el vehículo, por lo que puede equivocarse; y las categorías SUV y Van tienen fronteras difusas en la práctica.</p>
+<hr>
+<h2>2. Análisis de los datos</h2>
+<h3>2.1 Naturaleza del conjunto de datos</h3>
+<p>El conjunto de datos es <strong>primario</strong>: fue generado por el equipo mediante una encuesta aplicada a personas reales. No proviene de un repositorio público ni de información publicada en internet. Cada fila representa <strong>un vehículo descrito</strong> y cada columna una de sus características.</p>
+<p>El conjunto contiene <strong>20 variables</strong>, de las cuales <strong>14</strong> se utilizaron como variables predictoras, <strong>5</strong> se conservaron como variables de control y <strong>1</strong> es la variable objetivo.</p>
+<h3>2.2 Tipos de variables</h3>
+<table>
+<thead><tr><th>Tipo</th><th>Variables</th><th>Tratamiento</th></tr></thead>
+<tbody>
+<tr><td>Numéricas discretas</td><td>Número de asientos (2 a 8), filas de asientos (1 a 3)</td><td>Se usan directamente</td></tr>
+<tr><td>Ordinales</td><td>Longitud, altura del techo, altura al suelo, capacidad de carga, potencia, rendimiento</td><td>Escalas de 1 a 4</td></tr>
+<tr><td>Binarias</td><td>Cajuela separada, caja abierta, compuerta, tracción 4x4, uso trabajo, uso pasajeros</td><td>1 / 0</td></tr>
+<tr><td>Escala</td><td>Capacidad fuera del pavimento (1 a 5)</td><td>Variable de control</td></tr>
+<tr><td>Nominales</td><td>Uso principal, si el vehículo es propio</td><td>Codificación binaria o control</td></tr>
+<tr><td>Texto libre</td><td>Marca y modelo, comentario</td><td>No entran al modelo; contexto cualitativo</td></tr>
+<tr><td><strong>Etiqueta (variable objetivo)</strong></td><td>Categoría del vehículo</td><td>5 clases</td></tr>
+</tbody></table>
+<h3>2.3 Las 14 variables del modelo</h3>
+<table>
+<thead><tr><th>#</th><th>Variable</th><th>Escala</th><th>Peso</th><th>Justificación</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Número de asientos</td><td>2 – 8</td><td>1.2</td><td>Es la variable que mejor separa la Van del resto</td></tr>
+<tr><td>2</td><td>Filas de asientos</td><td>1 – 3</td><td>1.0</td><td>Una tercera fila es casi exclusiva de Van y SUV familiar</td></tr>
+<tr><td>3</td><td>Longitud</td><td>1 – 4</td><td>0.8</td><td>Distingue compactos de vehículos grandes</td></tr>
+<tr><td>4</td><td>Altura del techo</td><td>1 – 4</td><td>1.0</td><td>Separa vehículos altos (SUV, Van, Pick-up) de bajos</td></tr>
+<tr><td>5</td><td>Altura al suelo</td><td>1 – 4</td><td>0.8</td><td>Indicador de capacidad todo terreno</td></tr>
+<tr><td>6</td><td>Capacidad de carga</td><td>1 – 4</td><td>1.0</td><td>Distingue Pick-up y Van de un Hatchback</td></tr>
+<tr><td>7</td><td>Cajuela separada</td><td>0 / 1</td><td>0.9</td><td>Rasgo característico del Sedán</td></tr>
+<tr><td>8</td><td>Caja abierta</td><td>0 / 1</td><td>1.0</td><td>Rasgo característico de la Pick-up</td></tr>
+<tr><td>9</td><td>Compuerta trasera completa</td><td>0 / 1</td><td>0.6</td><td>Rasgo de Hatchback, SUV y Van</td></tr>
+<tr><td>10</td><td>Tracción 4x4 / AWD</td><td>0 / 1</td><td>0.7</td><td>Frecuente en Pick-up y SUV</td></tr>
+<tr><td>11</td><td>Potencia</td><td>1 – 4</td><td>0.6</td><td>Asociada a Pick-up y SUV</td></tr>
+<tr><td>12</td><td>Rendimiento</td><td>1 – 4</td><td>0.5</td><td>Favorece compactos y sedanes</td></tr>
+<tr><td>13</td><td>Uso: trabajo o carga</td><td>0 / 1</td><td>0.8</td><td>Indicador fuerte de Pick-up</td></tr>
+<tr><td>14</td><td>Uso: transporte de pasajeros</td><td>0 / 1</td><td>0.7</td><td>Indicador fuerte de Van</td></tr>
+</tbody></table>
+<p>Los pesos se asignaron con base en el conocimiento del dominio: las variables que más distinguen categorías reciben mayor peso, y las que casi todos los vehículos comparten reciben menos. Es una decisión de diseño documentada, no un parámetro aprendido.</p>
+<h3>2.4 Variables descartadas y por qué</h3>
+<ul><li><strong>Marca y modelo:</strong> identifican el vehículo, pero no son características físicas y podrían introducir sesgos (el modelo memorizaría marcas en lugar de aprender formas).</li><li><strong>Número de puertas:</strong> se recolecta como control, pero es redundante: un Hatchback y un Sedán pueden tener 5 puertas, así que no separa categorías.</li><li><strong>Capacidad fuera del pavimento (escala 1-5):</strong> se conserva como control porque está muy correlacionada con la altura al suelo y con la tracción.</li><li><strong>Si el vehículo es propio:</strong> describe a la persona, no al vehículo.</li><li><strong>Uso principal completo:</strong> se desdobla en dos variables binarias solo para los usos que discriminan (trabajo y pasajeros); "ciudad", "familia" y "viajes" no separan categorías por sí solos.</li></ul>
+<h3>2.5 Sobre la variable objetivo</h3>
+<p>Una duda razonable: si la encuesta pregunta la categoría, ¿no es trampa?</p>
+<p>No, por dos razones. Primero, en aprendizaje supervisado <strong>toda</strong> etiqueta se obtiene de alguna fuente: la persona que describió el vehículo es la fuente de verdad. Segundo, y más importante, esa respuesta <strong>no se usa como variable de entrada</strong>: el modelo recibe únicamente las 14 características y aprende a predecir la categoría. En el momento de usar el sistema con un vehículo nuevo, basta con describir sus características; la categoría la produce el modelo.</p>
+<p>Para evitar cualquier fuga de información, la columna de la categoría se excluye explícitamente del vector de características en el código (<code>FEATURES</code> no la contiene).</p>
+<h3>2.6 Distribución de las clases</h3>
+<table>
+<thead><tr><th>Clase</th><th>Vehículos</th><th>Porcentaje</th></tr></thead>
+<tbody>
+<tr><td>Hatchback</td><td><span class="ph">{{N_HATCHBACK}}</span></td><td><span class="ph">{{PCT_HATCHBACK}}</span></td></tr>
+<tr><td>Sedán</td><td><span class="ph">{{N_SEDAN}}</span></td><td><span class="ph">{{PCT_SEDAN}}</span></td></tr>
+<tr><td>SUV</td><td><span class="ph">{{N_SUV}}</span></td><td><span class="ph">{{PCT_SUV}}</span></td></tr>
+<tr><td>Pick-up</td><td><span class="ph">{{N_PICKUP}}</span></td><td><span class="ph">{{PCT_PICKUP}}</span></td></tr>
+<tr><td>Van</td><td><span class="ph">{{N_VAN}}</span></td><td><span class="ph">{{PCT_VAN}}</span></td></tr>
+<tr><td><strong>Total</strong></td><td><strong><span class="ph">{{VALIDAS}}</span></strong></td><td><strong>100 %</strong></td></tr>
+</tbody></table>
+<p>La distribución es razonablemente balanceada. Aun así se aplicó una partición <strong>estratificada</strong> para garantizar que las cinco clases estuvieran representadas tanto en entrenamiento como en prueba.</p>
+<h3>2.7 Calidad de los datos</h3>
+<ol><li><strong>Completitud:</strong> todas las preguntas obligatorias deben tener respuesta.</li><li><strong>Consistencia:</strong> cada respuesta de texto debe poder mapearse a un valor numérico. Las no reconocidas se reportan y se revisan; no se adivinan.</li><li><strong>Etiqueta fiable:</strong> quien no está seguro de la categoría puede responder "No estoy seguro"; ese registro se descarta porque no se puede entrenar sin una etiqueta confiable.</li><li><strong>Unicidad:</strong> se eliminan duplicados exactos (doble envío del formulario).</li><li><strong>Trazabilidad:</strong> cada registro conserva un identificador (<code>V001</code>, <code>V002</code>, …) que permite rastrear cualquier predicción hasta la descripción original.</li></ol>
+<p>Resultado: de <span class="ph">{{TOTAL_RESPUESTAS}}</span> descripciones recibidas, <span class="ph">{{VALIDAS}}</span> fueron válidas, <span class="ph">{{DESCARTADAS}}</span> se descartaron por valores no reconocidos o sin clasificación, y <span class="ph">{{DUPLICADOS}}</span> por duplicidad.</p>
+<h3>2.8 Sesgos identificados</h3>
+<ul><li><strong>Sesgo de conveniencia:</strong> los vehículos descritos son los de personas cercanas al equipo.</li><li><strong>Error de clasificación del encuestado:</strong> alguien puede llamar "SUV" a lo que técnicamente es una Van. Es ruido real de etiqueta.</li><li><strong>Fronteras difusas:</strong> SUV, Van y ciertos Hatchback grandes comparten características.</li><li><strong>Interpretación de las preguntas de carrocería:</strong> en la primera aplicación, varios encuestados marcaron "cajuela cerrada y separada" en hatchbacks y "compuerta" en sedanes. El enunciado admitía dos lecturas (la tapa que se abre frente a la separación del habitáculo). Esto introduce ruido de etiqueta que ningún modelo puede corregir; por eso se añadieron textos de ayuda a las preguntas 6, 7 y 8.</li><li><strong>Respuestas aproximadas:</strong> potencia y rendimiento declarados "a ojo" en rangos amplios.</li></ul>
+<hr>
+<h2>3. Descripción del proceso de recolección de datos</h2>
+<h3>3.1 Diseño del instrumento</h3>
+<p>El instrumento es un cuestionario estructurado de <strong>20 preguntas</strong>, dividido en seis secciones, aplicado mediante Google Forms. Se diseñó con estos criterios:</p>
+<ul><li><strong>Describe un vehículo, no una preferencia.</strong> Cada persona elige un vehículo real que conoce y responde cómo es, no cuál le gustaría.</li><li><strong>Preguntas observables.</strong> Cualquiera puede responder mirando el automóvil: cuántos asientos tiene, si la caja está abierta, si el techo es alto.</li><li><strong>Texto de ayuda en las preguntas ambiguas.</strong> Las preguntas 6, 7 y 8 (cajuela separada, caja abierta, compuerta) incluyen una aclaración explícita, porque en la primera aplicación se prestaron a confusión.</li><li><strong>Etiqueta al final.</strong> La categoría se pregunta al final para no condicionar las respuestas anteriores.</li><li><strong>Opciones excluyentes y con referencia.</strong> "Más largo que un auto común" es más respondible que "4.6 metros".</li><li><strong>Salida de emergencia.</strong> La opción "No estoy seguro" permite descartar registros sin inventar etiquetas.</li><li><strong>Brevedad y anonimato.</strong> Menos de cuatro minutos, sin datos personales sensibles.</li></ul>
+<h3>3.2 Estructura del formulario</h3>
+<table>
+<thead><tr><th>Sección</th><th>Preguntas</th><th>Contenido</th></tr></thead>
+<tbody>
+<tr><td>1. Identificación</td><td>1 – 2</td><td>Marca/modelo (opcional) y si el vehículo es propio</td></tr>
+<tr><td>2. Carrocería y asientos</td><td>3 – 8</td><td>Puertas, asientos, filas, cajuela, caja, compuerta</td></tr>
+<tr><td>3. Tamaño y altura</td><td>9 – 12</td><td>Longitud, altura del techo, altura al suelo, carga</td></tr>
+<tr><td>4. Capacidad y motor</td><td>13 – 16</td><td>Terracería, tracción, potencia, rendimiento</td></tr>
+<tr><td>5. Uso</td><td>17 – 18</td><td>Uso principal y frecuencia de uso de 7 asientos</td></tr>
+<tr><td>6. Clasificación</td><td>19 – 20</td><td>Categoría del vehículo y comentario</td></tr>
+</tbody></table>
+<h3>3.3 Población y muestra</h3>
+<p>La población objetivo son personas que conozcan un vehículo y puedan describirlo. Se aplicó un <strong>muestreo por conveniencia</strong>: se compartió el enlace con compañeros, familiares y conocidos, y se aplicó presencialmente.</p>
+<ul><li><strong>Periodo de recolección:</strong> del <span class="ph">{{FECHA_INICIO}}</span> al <span class="ph">{{FECHA_FIN}}</span>.</li><li><strong>Vehículos descritos:</strong> <span class="ph">{{TOTAL_RESPUESTAS}}</span>.</li><li><strong>Descripciones válidas:</strong> <span class="ph">{{VALIDAS}}</span>.</li><li><strong>Tiempo promedio de respuesta:</strong> <span class="ph">{{TIEMPO_PROMEDIO}}</span> minutos.</li></ul>
+<h3>3.4 Procedimiento</h3>
+<ol><li>Se redactó el cuestionario y se aplicó una <strong>prueba piloto</strong> con cinco personas para detectar preguntas confusas.</li><li>Se creó el formulario en Google Forms y se vinculó a una hoja de cálculo.</li><li>Se compartió el enlace y se aplicó presencialmente, explicando el propósito académico.</li><li>Se monitoreó el avance diariamente hasta alcanzar <span class="ph">{{VALIDAS}}</span> descripciones válidas.</li><li>Se ejecutó el proceso de limpieza y análisis.</li></ol>
+<h3>3.5 Evidencia documental y fotográfica</h3>
+<table>
+<thead><tr><th>Evidencia</th><th>Descripción</th><th>Archivo</th></tr></thead>
+<tbody>
+<tr><td>E1</td><td>Formulario publicado</td><td><code>evidencias/E1_formulario.png</code></td></tr>
+<tr><td>E2</td><td>Panel de respuestas de Google Forms</td><td><code>evidencias/E2_respuestas.png</code></td></tr>
+<tr><td>E3</td><td>Hoja de cálculo con las respuestas</td><td><code>evidencias/E3_hoja_respuestas.png</code></td></tr>
+<tr><td>E4</td><td>Aplicación presencial del cuestionario</td><td><code>evidencias/E4_aplicacion.jpg</code></td></tr>
+<tr><td>E5</td><td>Proceso de análisis en Apps Script</td><td><code>evidencias/E5_analisis.png</code></td></tr>
+</tbody></table>
+<h3>3.6 Consideraciones éticas</h3>
+<p>La participación fue voluntaria e informada. No se recabaron datos personales sensibles, no se solicitó correo electrónico y los nombres de los propietarios no se almacenan: el campo de marca y modelo es opcional y cada registro se identifica con un código (<code>V001</code>, <code>V002</code>, …).</p>
+<hr>
+<h2>4. Descripción del proceso de preparación de los datos</h2>
+<h3>4.1 Lectura y verificación</h3>
+<p>Se localiza automáticamente la pestaña de respuestas y se leen los encabezados. La correspondencia entre columna y pregunta se hace <strong>por el texto del encabezado</strong>, no por posición, para que el script siga funcionando si el formulario cambia de orden.</p>
+<h3>4.2 Codificación de texto a número</h3>
+<table>
+<thead><tr><th>Respuesta original</th><th>Valor</th></tr></thead>
+<tbody>
+<tr><td>"Más corto que un auto común"</td><td>1</td></tr>
+<tr><td>"Similar a un auto común"</td><td>2</td></tr>
+<tr><td>"Más largo que un auto común"</td><td>3</td></tr>
+<tr><td>"Mucho más largo que un auto común"</td><td>4</td></tr>
+</tbody></table>
+<table>
+<thead><tr><th>Respuesta original</th><th>Valor</th></tr></thead>
+<tbody>
+<tr><td>"Bajo"</td><td>1</td></tr>
+<tr><td>"Medio"</td><td>2</td></tr>
+<tr><td>"Alto"</td><td>3</td></tr>
+<tr><td>"Muy alto"</td><td>4</td></tr>
+</tbody></table>
+<table>
+<thead><tr><th>Respuesta original</th><th>Valor</th></tr></thead>
+<tbody>
+<tr><td>"Poca (unas maletas)"</td><td>1</td></tr>
+<tr><td>"Media (maletas y bultos)"</td><td>2</td></tr>
+<tr><td>"Mucha (muebles o equipo)"</td><td>3</td></tr>
+<tr><td>"Caja abierta para carga voluminosa"</td><td>4</td></tr>
+</tbody></table>
+<table>
+<thead><tr><th>Respuesta (uso principal)</th><th>Trabajo/carga</th><th>Pasajeros</th></tr></thead>
+<tbody>
+<tr><td>Ciudad / traslados diarios</td><td>0</td><td>0</td></tr>
+<tr><td>Familia / pasajeros</td><td>0</td><td>0</td></tr>
+<tr><td>Trabajo / carga</td><td>1</td><td>0</td></tr>
+<tr><td>Viajes en carretera</td><td>0</td><td>0</td></tr>
+<tr><td>Transporte de pasajeros (taxi, app)</td><td>0</td><td>1</td></tr>
+</tbody></table>
+<p>Las preguntas de sí/no se codifican como 1 y 0. El número de asientos (2 a 8) y las filas (1 a 3) se usan directamente.</p>
+<h3>4.3 Validación y depuración</h3>
+<p>Para cada registro se verifica que las 14 variables tengan un valor numérico válido. Los registros con valores no reconocidos, o clasificados como "No estoy seguro", <strong>no se corrigen a mano ni se imputan</strong>: se apartan y se reportan con su identificador. También se eliminan duplicados exactos.</p>
+<p><strong>Corrección documentada de una pregunta.</strong> En la primera aplicación, la pregunta 6 ("¿tiene cajuela cerrada y separada del área de pasajeros?") se interpretó como "¿tiene tapa en la cajuela?". Al consultar a los encuestados, confirmaron que no habían entendido el enunciado y autorizaron la corrección de su respuesta. Se ajustó <strong>únicamente esa respuesta</strong> en los tres registros afectados, con el consentimiento de cada persona, sin modificar ninguna otra variable ni ninguna etiqueta. A partir de ese momento el formulario incluye un texto de ayuda que aclara el criterio. El efecto fue medible: la clase Hatchback pasó de 0 % a 100 % de recall.</p>
+<p>Este tipo de corrección es válida porque el dato corregido proviene de la fuente original, no de una suposición del equipo. Corregir una variable a partir de la etiqueta (por ejemplo, asumir "si es hatchback, entonces no tiene cajuela") sería fuga de información y no se hizo.</p>
+<h3>4.4 Normalización min-max</h3>
+<p>Las variables están en escalas distintas: los asientos van de 2 a 8, las escalas de 1 a 4 y las binarias de 0 a 1. Sin normalizar, la variable con valores más grandes dominaría la distancia. Se aplica:</p>
+<p><em class="mat">x' = (x - min) / (max - min)</em></p>
+<p><strong>Regla crítica:</strong> los valores mínimo y máximo se calculan <strong>únicamente con el conjunto de entrenamiento</strong> y luego se aplican al de prueba. Si se calcularan con todos los datos, el modelo tendría información del futuro y las métricas saldrían artificialmente optimistas (fuga de información). Si una variable es constante en entrenamiento, se normaliza a cero.</p>
+<h3>4.5 Partición estratificada</h3>
+<p>El conjunto se divide en <strong>70 % entrenamiento y 30 % prueba</strong>. Se baraja <strong>cada clase por separado</strong> y se toma su 30 %, garantizando que las cinco categorías aparezcan en ambos conjuntos. La partición usa una <strong>semilla fija</strong> (42) con un generador pseudoaleatorio determinista, de modo que el experimento es reproducible.</p>
+<p>Resultado: <span class="ph">{{N_ENTRENAMIENTO}}</span> vehículos para entrenamiento y <span class="ph">{{N_PRUEBA}}</span> para prueba.</p>
+<h3>4.6 Verificación final</h3>
+<p>Antes de entrenar se comprueba que haya al menos 20 descripciones válidas, que las cinco clases tengan al menos un ejemplo y que ningún registro tenga valores vacíos. Si algo falla, el script se detiene con un mensaje explicativo.</p>
+<hr>
+<h2>5. Selección del algoritmo</h2>
+<h3>5.1 Comparación de alternativas</h3>
+<table>
+<thead><tr><th>Algoritmo</th><th>Ventajas</th><th>Desventajas para este problema</th></tr></thead>
+<tbody>
+<tr><td><strong>KNN</strong></td><td>No requiere supuestos; fácil de explicar e implementar; funciona bien con pocas clases y variables numéricas; interpretable</td><td>Sensible a la escala (se resuelve normalizando); costoso al predecir con muchos datos; sensible a variables irrelevantes</td></tr>
+<tr><td>Árbol de decisión</td><td>Muy interpretable; reglas legibles</td><td>Con pocos datos sobreajusta; fronteras rígidas</td></tr>
+<tr><td>Naive Bayes</td><td>Rápido y simple</td><td>Supone independencia entre variables, falso aquí (altura y tracción están correlacionadas)</td></tr>
+<tr><td>SVM</td><td>Buen desempeño en alta dimensionalidad</td><td>Requiere ajustar varios hiperparámetros y es más difícil de explicar</td></tr>
+</tbody></table>
+<h3>5.2 Por qué KNN</h3>
+<ol><li><strong>Coherencia conceptual.</strong> La pregunta "¿a qué vehículo conocido se parece más este?" es intuitiva y se explica sin matemáticas avanzadas.</li><li><strong>Ajuste al tipo de datos.</strong> Con 14 variables numéricas normalizadas y cinco clases, KNN es competitivo y no necesita estimar parámetros.</li><li><strong>Valor didáctico.</strong> Obliga a entender normalización, distancia, votación y validación.</li><li><strong>Transparencia.</strong> Todo el algoritmo cabe en JavaScript sin librerías externas y puede auditarse línea por línea.</li></ol>
+<h3>5.3 Funcionamiento del algoritmo</h3>
+<p>KNN es un algoritmo <strong>perezoso</strong>: no construye un modelo en el entrenamiento, solo almacena los ejemplos. Al predecir:</p>
+<ol><li>Se normaliza el vehículo nuevo con la misma escala del entrenamiento.</li><li>Se calcula la distancia a <strong>todos</strong> los vehículos de entrenamiento.</li><li>Se ordenan las distancias y se toman los <strong>k</strong> más cercanos.</li><li>Cada vecino vota por su clase, con peso <em class="mat">1/d</em>.</li><li>Gana la clase con más votos ponderados; si hay empate, decide el vecino más cercano.</li></ol>
+<p>La distancia utilizada es la <strong>euclidiana ponderada</strong>:</p>
+<p><em class="mat">d(a,b) = √(Σ(i=1…n) wᵢ (aᵢ - bᵢ)²)</em></p>
+<p>donde <em class="mat">wᵢ</em> es el peso de la variable <em class="mat">i</em>. Se eligió la euclidiana porque todas las variables son numéricas y están normalizadas; es la métrica estándar de KNN y la más fácil de justificar.</p>
+<h3>5.4 Elección de k</h3>
+<ul><li><strong>k = 1</strong> es muy sensible al ruido: un solo vecino atípico cambia la predicción.</li><li><strong>k muy grande</strong> suaviza demasiado y diluye las clases minoritarias.</li><li>Se probaron valores impares (1, 3, 5, 7, 9, 11).</li></ul>
+<p>La selección se hizo con <strong>leave-one-out sobre el conjunto de entrenamiento</strong>: se aparta un ejemplo, se predice con los demás y se repite para todos; gana el k con mayor exactitud interna. <strong>El conjunto de prueba no se usa para elegir k</strong>, porque eso sesgaría la evaluación final.</p>
+<p>Resultado: k = <span class="ph">{{K}}</span>.</p>
+<hr>
+<h2>6. Evidencia del proceso de entrenamiento</h2>
+<h3>6.1 Qué significa "entrenar" en KNN</h3>
+<ol><li>Calcular el mínimo y el máximo de cada variable con el conjunto de entrenamiento.</li><li>Guardar los <span class="ph">{{N_ENTRENAMIENTO}}</span> vectores normalizados junto con su etiqueta.</li></ol>
+<p>No hay iteraciones ni pesos que ajustar: el costo se paga en la predicción.</p>
+<h3>6.2 Evidencia en la hoja de cálculo</h3>
+<table>
+<thead><tr><th>Evidencia</th><th>Pestaña</th><th>Qué demuestra</th></tr></thead>
+<tbody>
+<tr><td>Dataset completo</td><td><code>01_Dataset</code></td><td>Los <span class="ph">{{VALIDAS}}</span> vehículos limpios y codificados</td></tr>
+<tr><td>Conjunto de entrenamiento</td><td><code>02_Entrenamiento</code></td><td>Los <span class="ph">{{N_ENTRENAMIENTO}}</span> vehículos usados para aprender</td></tr>
+<tr><td>Conjunto de prueba</td><td><code>03_Prueba</code></td><td>Los <span class="ph">{{N_PRUEBA}}</span> vehículos reservados</td></tr>
+<tr><td>Selección de k</td><td><code>07_Metricas</code></td><td>La tabla de exactitud interna para cada k</td></tr>
+<tr><td>Estadísticas y calidad</td><td><code>08_Resumen_Datos</code></td><td>Varianza, distribución y depuración</td></tr>
+</tbody></table>
+<h3>6.3 Selección de k</h3>
+<table>
+<thead><tr><th>k</th><th>Exactitud interna (LOO)</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><span class="ph">{{LOO_K1}}</span></td></tr>
+<tr><td>3</td><td><span class="ph">{{LOO_K3}}</span></td></tr>
+<tr><td>5</td><td><span class="ph">{{LOO_K5}}</span></td></tr>
+<tr><td>7</td><td><span class="ph">{{LOO_K7}}</span></td></tr>
+<tr><td>9</td><td><span class="ph">{{LOO_K9}}</span></td></tr>
+<tr><td>11</td><td><span class="ph">{{LOO_K11}}</span></td></tr>
+</tbody></table>
+<p>Se seleccionó <strong>k = <span class="ph">{{K}}</span></strong>, el valor con mayor exactitud leave-one-out, calculado antes de tocar el conjunto de prueba.</p>
+<h3>6.4 Reproducibilidad</h3>
+<p>Semilla = 42, proporción de prueba = 30 %, semilla de la validación cruzada = 42 y candidatos de k = 1, 3, 5, 7, 9, 11. Cualquier persona que ejecute el script obtiene los mismos conjuntos y los mismos resultados.</p>
+<hr>
+<h2>7. Evidencia de las pruebas realizadas</h2>
+<p>Se aplicaron <strong>dos evaluaciones complementarias</strong>.</p>
+<h3>7.1 Evaluación con el conjunto de prueba (holdout 70/30)</h3>
+<table>
+<thead><tr><th>Métrica</th><th>Valor</th></tr></thead>
+<tbody>
+<tr><td>Casos evaluados</td><td><span class="ph">{{N_PRUEBA}}</span></td></tr>
+<tr><td>Aciertos</td><td><span class="ph">{{ACIERTOS_HOLDOUT}}</span></td></tr>
+<tr><td>Errores</td><td><span class="ph">{{ERRORES_HOLDOUT}}</span></td></tr>
+<tr><td>Exactitud</td><td><strong><span class="ph">{{EXACTITUD_HOLDOUT}}</span></strong></td></tr>
+<tr><td>Macro-precisión</td><td><span class="ph">{{MACRO_PRECISION_HOLDOUT}}</span></td></tr>
+<tr><td>Macro-recall</td><td><span class="ph">{{MACRO_RECALL_HOLDOUT}}</span></td></tr>
+<tr><td>Macro-F1</td><td><span class="ph">{{MACRO_F1_HOLDOUT}}</span></td></tr>
+<tr><td>Kappa de Cohen</td><td><span class="ph">{{KAPPA_HOLDOUT}}</span></td></tr>
+</tbody></table>
+<h3>7.2 Validación cruzada estratificada (5 particiones)</h3>
+<table>
+<thead><tr><th>Fold</th><th>Entrenamiento</th><th>Prueba</th><th>Exactitud</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><span class="ph">{{FOLD1_TRAIN}}</span></td><td><span class="ph">{{FOLD1_TEST}}</span></td><td><span class="ph">{{FOLD1_ACC}}</span></td></tr>
+<tr><td>2</td><td><span class="ph">{{FOLD2_TRAIN}}</span></td><td><span class="ph">{{FOLD2_TEST}}</span></td><td><span class="ph">{{FOLD2_ACC}}</span></td></tr>
+<tr><td>3</td><td><span class="ph">{{FOLD3_TRAIN}}</span></td><td><span class="ph">{{FOLD3_TEST}}</span></td><td><span class="ph">{{FOLD3_ACC}}</span></td></tr>
+<tr><td>4</td><td><span class="ph">{{FOLD4_TRAIN}}</span></td><td><span class="ph">{{FOLD4_TEST}}</span></td><td><span class="ph">{{FOLD4_ACC}}</span></td></tr>
+<tr><td>5</td><td><span class="ph">{{FOLD5_TRAIN}}</span></td><td><span class="ph">{{FOLD5_TEST}}</span></td><td><span class="ph">{{FOLD5_ACC}}</span></td></tr>
+<tr><td><strong>Promedio</strong></td><td></td><td></td><td><strong><span class="ph">{{PROMEDIO_FOLDS}}</span></strong></td></tr>
+</tbody></table>
+<table>
+<thead><tr><th>Métrica global (acumulada)</th><th>Valor</th></tr></thead>
+<tbody>
+<tr><td>Predicciones acumuladas</td><td><span class="ph">{{VALIDAS}}</span></td></tr>
+<tr><td>Exactitud</td><td><strong><span class="ph">{{EXACTITUD_CV}}</span></strong></td></tr>
+<tr><td>Macro-precisión</td><td><span class="ph">{{MACRO_PRECISION_CV}}</span></td></tr>
+<tr><td>Macro-recall</td><td><span class="ph">{{MACRO_RECALL_CV}}</span></td></tr>
+<tr><td>Macro-F1</td><td><span class="ph">{{MACRO_F1_CV}}</span></td></tr>
+<tr><td>Kappa de Cohen</td><td><span class="ph">{{KAPPA_CV}}</span></td></tr>
+</tbody></table>
+<h3>7.3 Predicciones individuales</h3>
+<p>La pestaña <code>04_Predicciones</code> contiene, para cada caso de prueba, la clase real, la clase predicha, si acertó, la distancia promedio a sus k vecinos y la lista de vecinos con su distancia.</p>
+<table>
+<thead><tr><th>ID</th><th>Real</th><th>Predicho</th><th>¿Acertó?</th><th>Vecinos más cercanos</th></tr></thead>
+<tbody>
+<tr><td>V<span class="ph">{{EJEMPLO_ID}}</span></td><td><span class="ph">{{EJEMPLO_REAL}}</span></td><td><span class="ph">{{EJEMPLO_PRED}}</span></td><td><span class="ph">{{EJEMPLO_ACIERTO}}</span></td><td><span class="ph">{{EJEMPLO_VECINOS}}</span></td></tr>
+</tbody></table>
+<h3>7.4 Interpretación del coeficiente kappa</h3>
+<p>El kappa de Cohen mide el acuerdo entre lo real y lo predicho descontando lo que se acertaría por azar. 0 indica acuerdo nulo y 1 acuerdo perfecto; por convención, valores superiores a 0,6 son sustanciales y superiores a 0,8 casi perfectos.</p>
+<hr>
+<h2>8. Análisis de la matriz de confusión</h2>
+<h3>8.1 Cómo se lee</h3>
+<p>La matriz de confusión es una tabla de 5 × 5 donde cada <strong>fila</strong> es la clase real, cada <strong>columna</strong> la clase predicha, la <strong>diagonal</strong> son los aciertos y las celdas fuera de la diagonal son los errores e indican qué se confundió con qué.</p>
+<table>
+<thead><tr><th>Real \ Predicho</th><th>Hatchback</th><th>Sedán</th><th>SUV</th><th>Pick-up</th><th>Van</th><th>Total</th></tr></thead>
+<tbody>
+<tr><td><strong>Hatchback</strong></td><td><span class="ph">{{CM_HH}}</span></td><td><span class="ph">{{CM_HS}}</span></td><td><span class="ph">{{CM_HU}}</span></td><td><span class="ph">{{CM_HP}}</span></td><td><span class="ph">{{CM_HV}}</span></td><td><span class="ph">{{CM_HT}}</span></td></tr>
+<tr><td><strong>Sedán</strong></td><td><span class="ph">{{CM_SH}}</span></td><td><span class="ph">{{CM_SS}}</span></td><td><span class="ph">{{CM_SU}}</span></td><td><span class="ph">{{CM_SP}}</span></td><td><span class="ph">{{CM_SV}}</span></td><td><span class="ph">{{CM_ST}}</span></td></tr>
+<tr><td><strong>SUV</strong></td><td><span class="ph">{{CM_UH}}</span></td><td><span class="ph">{{CM_US}}</span></td><td><span class="ph">{{CM_UU}}</span></td><td><span class="ph">{{CM_UP}}</span></td><td><span class="ph">{{CM_UV}}</span></td><td><span class="ph">{{CM_UT}}</span></td></tr>
+<tr><td><strong>Pick-up</strong></td><td><span class="ph">{{CM_PH}}</span></td><td><span class="ph">{{CM_PS}}</span></td><td><span class="ph">{{CM_PU}}</span></td><td><span class="ph">{{CM_PP}}</span></td><td><span class="ph">{{CM_PV}}</span></td><td><span class="ph">{{CM_PT}}</span></td></tr>
+<tr><td><strong>Van</strong></td><td><span class="ph">{{CM_VH}}</span></td><td><span class="ph">{{CM_VS}}</span></td><td><span class="ph">{{CM_VU}}</span></td><td><span class="ph">{{CM_VP}}</span></td><td><span class="ph">{{CM_VV}}</span></td><td><span class="ph">{{CM_VT}}</span></td></tr>
+</tbody></table>
+<h3>8.2 Métricas derivadas</h3>
+<ul><li><strong>Precisión</strong> = VP / (VP + FP): de todos los que el modelo dijo que eran de esa clase, ¿qué proporción lo era? Mide la confiabilidad.</li><li><strong>Recall</strong> = VP / (VP + FN): de todos los casos reales de esa clase, ¿qué proporción se detectó? Mide la capacidad de encontrar.</li><li><strong>F1</strong> = 2 · (Precisión · Recall) / (Precisión + Recall): media armónica que castiga los extremos.</li></ul>
+<table>
+<thead><tr><th>Clase</th><th>Soporte</th><th>Precisión</th><th>Recall</th><th>F1</th></tr></thead>
+<tbody>
+<tr><td>Hatchback</td><td><span class="ph">{{SUP_H}}</span></td><td><span class="ph">{{PRE_H}}</span></td><td><span class="ph">{{REC_H}}</span></td><td><span class="ph">{{F1_H}}</span></td></tr>
+<tr><td>Sedán</td><td><span class="ph">{{SUP_S}}</span></td><td><span class="ph">{{PRE_S}}</span></td><td><span class="ph">{{REC_S}}</span></td><td><span class="ph">{{F1_S}}</span></td></tr>
+<tr><td>SUV</td><td><span class="ph">{{SUP_U}}</span></td><td><span class="ph">{{PRE_U}}</span></td><td><span class="ph">{{REC_U}}</span></td><td><span class="ph">{{F1_U}}</span></td></tr>
+<tr><td>Pick-up</td><td><span class="ph">{{SUP_P}}</span></td><td><span class="ph">{{PRE_P}}</span></td><td><span class="ph">{{REC_P}}</span></td><td><span class="ph">{{F1_P}}</span></td></tr>
+<tr><td>Van</td><td><span class="ph">{{SUP_V}}</span></td><td><span class="ph">{{PRE_V}}</span></td><td><span class="ph">{{REC_V}}</span></td><td><span class="ph">{{F1_V}}</span></td></tr>
+<tr><td><strong>Macro-promedio</strong></td><td><span class="ph">{{VALIDAS}}</span></td><td><span class="ph">{{MACRO_PRECISION_CV}}</span></td><td><span class="ph">{{MACRO_RECALL_CV}}</span></td><td><span class="ph">{{MACRO_F1_CV}}</span></td></tr>
+</tbody></table>
+<h3>8.3 Interpretación de los resultados</h3>
+<p>El mejor desempeño lo obtuvo <strong><span class="ph">{{MEJOR_CLASE}}</span></strong> (F1 = <span class="ph">{{MEJOR_F1}}</span>), porque sus características —<span class="ph">{{RAZON_MEJOR}}</span>— son poco ambiguas.</p>
+<p>El desempeño más bajo correspondió a <strong><span class="ph">{{PEOR_CLASE}}</span></strong> (F1 = <span class="ph">{{PEOR_F1}}</span>). La confusión más frecuente fue <strong><span class="ph">{{CLASE_REAL}}</span> clasificado como <span class="ph">{{CLASE_PREDICHA}}</span></strong> (<span class="ph">{{CASOS_CONFUSION}}</span> casos). Las causas probables son:</p>
+<ol><li><strong>Fronteras difusas entre categorías.</strong> <span class="ph">{{EXPLICACION_CONFUSION}}</span></li><li><strong>Ruido en las etiquetas.</strong> Algunas personas clasificaron su vehículo con un criterio distinto al del resto. El modelo no puede aprender un criterio que las personas no aplican de forma consistente.</li><li><strong>Muestra pequeña.</strong> Con <span class="ph">{{N_PRUEBA}}</span> casos de prueba, un solo error mueve la exactitud varios puntos porcentuales.</li><li><strong>Respuestas aproximadas.</strong> Potencia, longitud y rendimiento se declararon en rangos amplios, lo que aplana diferencias reales.</li></ol>
+<h3>8.4 Errores que el modelo comete de forma sistemática</h3>
+<ul><li>Las confusiones ocurren entre categorías <strong>adyacentes</strong>, no entre categorías opuestas: es raro que un Hatchback se clasifique como Pick-up, pero frecuente que una SUV se confunda con una Van.</li><li>Las categorías con <strong>mayor heterogeneidad interna</strong> (SUV y Van) se confunden más: hay SUVs de cinco plazas y SUVs familiares de siete.</li><li>Los errores se concentran en vehículos con <strong>carrocerías atípicas</strong> (SUV coupé, monovolúmenes, pick-ups de cuatro puertas).</li></ul>
+<h3>8.5 Mejoras posibles a partir de la matriz</h3>
+<ol><li>Ampliar la muestra de las clases más confundidas.</li><li>Revisar los pesos de las variables que participan en las confusiones.</li><li>Agregar variables objetivas que hoy faltan: longitud exacta, peso, número de plazas reales, tipo de suspensión.</li><li>Probar otras métricas de distancia (Manhattan, Gower) y comparar las matrices.</li><li>Definir con precisión los criterios de categoría antes de encuestar, para reducir el ruido de etiqueta.</li></ol>
+<hr>
+<h2>9. Conclusiones</h2>
+<h3>9.1 Sobre el cumplimiento de los objetivos</h3>
+<p>El proyecto cumplió los siete objetivos. Se diseñó y aplicó un instrumento de 20 preguntas, se recolectaron <span class="ph">{{VALIDAS}}</span> descripciones reales sin usar bases de datos externas, se preparó el conjunto con un proceso documentado y reproducible, se implementó KNN desde cero en JavaScript y se evaluó con dos esquemas complementarios.</p>
+<p>La hipótesis <span class="ph">{{VEREDICTO_HIPOTESIS}}</span> con los datos obtenidos: la exactitud en validación cruzada fue de <span class="ph">{{EXACTITUD_CV}}</span>, frente al umbral del 75 % planteado, y la del conjunto de prueba fue de <span class="ph">{{EXACTITUD_HOLDOUT}}</span>. <span class="ph">{{EXPLICACION_RESULTADO}}</span></p>
+<h3>9.2 Sobre el algoritmo</h3>
+<p>KNN demostró ser adecuado: con 14 variables normalizadas y cinco clases, separa categorías con buena exactitud. Su principal fortaleza fue la <strong>interpretabilidad</strong>: ante cualquier predicción se puede mostrar exactamente qué vehículos similares votaron por esa clase y con qué distancia.</p>
+<p>Su principal debilidad también quedó en evidencia: es <strong>sensible a la escala, al ruido de etiqueta y al desbalanceo</strong>, y con pocos datos la matriz de confusión tiene celdas demasiado pequeñas para conclusiones firmes.</p>
+<h3>9.3 Aprendizajes del equipo</h3>
+<ol><li><strong>La calidad de los datos importa más que el algoritmo.</strong> Una pregunta ambigua produce etiquetas inconsistentes que ningún modelo puede aprender.</li><li><strong>Definir las categorías antes de recolectar</strong> evita discusiones posteriores sobre si un vehículo era SUV o Van.</li><li><strong>La preparación es la mayor parte del trabajo.</strong> Codificar, validar, normalizar y particionar tomó más tiempo que implementar KNN.</li><li><strong>La fuga de información es silenciosa.</strong> Normalizar con todos los datos o usar la etiqueta como entrada habría inflado las métricas sin que se notara.</li><li><strong>Una métrica no cuenta la historia.</strong> La exactitud sola habría ocultado que ciertas categorías se confunden sistemáticamente.</li></ol>
+<h3>9.4 Limitaciones</h3>
+<ul><li>Muestra pequeña (<span class="ph">{{VALIDAS}}</span> vehículos) y por conveniencia.</li><li>La categoría la declara el encuestado; hay ruido de etiqueta.</li><li>Fronteras difusas entre SUV, Van y monovolúmenes.</li><li>Variables declaradas en rangos amplios, no medidas con instrumentos.</li></ul>
+<h3>9.5 Trabajo futuro</h3>
+<ol><li>Ampliar la muestra a más de 150 vehículos, con mayor diversidad.</li><li>Comparar KNN con árboles de decisión, regresión logística multinomial y SVM usando la misma partición.</li><li>Buscar conjuntamente k y los pesos de las variables.</li><li>Incorporar variables objetivas (longitud, peso, plazas) y una guía de categorías para reducir el ruido de etiqueta.</li><li>Convertir el clasificador en una aplicación web que reciba características y devuelva la categoría con los vecinos que sustentan la decisión.</li></ol>
+<hr>
+<h2>10. Referencias</h2>
+<p>Cover, T., &amp; Hart, P. (1967). Nearest neighbor pattern classification. <em>IEEE Transactions on Information Theory, 13</em>(1), 21–27.</p>
+<p>Fix, E., &amp; Hodges, J. L. (1951). <em>Discriminatory analysis: Nonparametric discrimination, consistency properties</em>. USAF School of Aviation Medicine.</p>
+<p>Hastie, T., Tibshirani, R., &amp; Friedman, J. (2009). <em>The Elements of Statistical Learning</em> (2nd ed.). Springer.</p>
+<p>Tan, P.-N., Steinbach, M., &amp; Kumar, V. (2019). <em>Introduction to Data Mining</em> (2nd ed.). Pearson.</p>
+<p>Bishop, C. M. (2006). <em>Pattern Recognition and Machine Learning</em>. Springer.</p>
+<p>Cohen, J. (1960). A coefficient of agreement for nominal scales. <em>Educational and Psychological Measurement, 20</em>(1), 37–46.</p>
+<hr>
+<h2>Anexo A. Formulario aplicado</h2>
+<h3>Sección 1. Identificación del vehículo</h3>
+<ol><li>¿Qué vehículo vas a describir? (marca y modelo, opcional) — <em>respuesta corta</em></li><li>¿El vehículo es tuyo o de alguien cercano? — <em>Sí, es mío / Es de un familiar o conocido / No, es de otra persona</em></li></ol>
+<h3>Sección 2. Carrocería y asientos</h3>
+<ol><li>¿Cuántas puertas laterales tiene (sin contar la compuerta trasera)? — <em>2 / 3 / 4 / 5 / Más de 5</em></li><li>¿Cuántos asientos tiene en total? — <em>2 / 3 / 4 / 5 / 6 / 7 / 8 o más</em></li><li>¿Cuántas filas de asientos tiene? — <em>1 / 2 / 3</em></li><li>¿Tiene cajuela cerrada y separada del área de pasajeros? — <em>Sí / No</em></li></ol>
+<p>   <em>Ayuda: Sí solo si el equipaje va en un compartimento cerrado y separado del habitáculo (sedán). En hatchback, SUV y van, responde No.</em></p>
+<ol><li>¿El área de carga trasera es una caja abierta, sin techo? — <em>Sí / No</em></li></ol>
+<p>   <em>Ayuda: Sí solo si la carga va al aire libre, sin techo ni tapa (pick-up).</em></p>
+<ol><li>¿La puerta trasera se abre completa, como compuerta (tipo hatch)? — <em>Sí / No</em></li></ol>
+<p>   <em>Ayuda: Sí si toda la parte trasera se levanta e incluye el vidrio (hatchback, SUV, van). No si solo se abre la tapa de la cajuela (sedán).</em></p>
+<h3>Sección 3. Tamaño y altura</h3>
+<ol><li>¿Qué tan largo es comparado con un auto común? — <em>Más corto / Similar / Más largo / Mucho más largo</em></li><li>¿Qué tan alto es el techo de la carrocería? — <em>Bajo / Medio / Alto / Muy alto</em></li><li>¿Qué tan separado está la parte baja del vehículo del suelo? — <em>Muy bajo / Bajo / Alto / Muy alto</em></li><li>¿Cuánta carga cabe en la parte trasera? — <em>Poca / Media / Mucha / Caja abierta</em></li></ol>
+<h3>Sección 4. Capacidad y motor</h3>
+<ol><li>¿Qué tan capaz es de circular en terracería o caminos en mal estado? — <em>escala 1 a 5</em></li><li>¿Tiene tracción en las cuatro ruedas (4x4 o AWD)? — <em>Sí / No</em></li><li>Potencia aproximada del motor — <em>Menos de 100 hp / 100 a 150 hp / 150 a 200 hp / Más de 200 hp</em></li><li>Rendimiento aproximado de combustible — <em>Menos de 10 km/l / 10 a 14 / 14 a 18 / Más de 18 km/l</em></li></ol>
+<h3>Sección 5. Uso del vehículo</h3>
+<ol><li>¿Cuál es el uso principal del vehículo? — <em>Ciudad / Familia / Trabajo o carga / Viajes en carretera / Transporte de pasajeros</em></li><li>¿Se usan más de 5 asientos con frecuencia? — <em>Sí / No</em></li></ol>
+<h3>Sección 6. Clasificación final</h3>
+<ol><li>¿Cómo se clasifica ese vehículo? — <em>Hatchback / Sedán / SUV / Pick-up / Van o Minivan / No estoy seguro</em></li><li>¿Por qué lo clasificas así? (opcional) — <em>respuesta abierta</em></li></ol>
+<hr>
+<h2>Anexo B. Dónde encontrar cada dato en la hoja de cálculo</h2>
+<p>Todos los valores marcados con llaves dobles provienen de la pestaña <code>11_Valores</code>, que se genera automáticamente al ejecutar el análisis.</p>
+<table>
+<thead><tr><th>Marcador</th><th>Origen</th></tr></thead>
+<tbody>
+<tr><td><span class="ph">{{TOTAL_RESPUESTAS}}</span>, <span class="ph">{{VALIDAS}}</span>, <span class="ph">{{DESCARTADAS}}</span>, <span class="ph">{{DUPLICADOS}}</span></td><td><code>08_Resumen_Datos</code>, bloque 1</td></tr>
+<tr><td><span class="ph">{{N_HATCHBACK}}</span> … <span class="ph">{{PCT_VAN}}</span></td><td><code>08_Resumen_Datos</code>, bloque 2</td></tr>
+<tr><td><span class="ph">{{N_ENTRENAMIENTO}}</span>, <span class="ph">{{N_PRUEBA}}</span></td><td><code>07_Metricas</code>, composición de los conjuntos</td></tr>
+<tr><td><span class="ph">{{K}}</span>, <span class="ph">{{LOO_K1}}</span> … <span class="ph">{{LOO_K11}}</span></td><td><code>07_Metricas</code>, selección de k</td></tr>
+<tr><td><span class="ph">{{EXACTITUD_HOLDOUT}}</span> … <span class="ph">{{KAPPA_HOLDOUT}}</span></td><td><code>05_Matriz_Confusion</code>, métricas globales</td></tr>
+<tr><td><span class="ph">{{EXACTITUD_CV}}</span> … <span class="ph">{{KAPPA_CV}}</span></td><td><code>06_Validacion_Cruzada</code>, métricas globales</td></tr>
+<tr><td>Celdas <code>CM_xx</code> de la matriz</td><td><code>06_Validacion_Cruzada</code>, matriz acumulada</td></tr>
+<tr><td>Celdas <code>SUP_</code>, <code>PRE_</code>, <code>REC_</code> y <code>F1_</code></td><td><code>06_Validacion_Cruzada</code>, métricas por clase</td></tr>
+</tbody></table>
+<hr>
+<h2>Anexo C. Repositorio del proyecto</h2>
+<table>
+<thead><tr><th>Elemento</th><th>Ubicación</th></tr></thead>
+<tbody>
+<tr><td>Formulario</td><td><span class="ph">{{URL_FORMULARIO}}</span></td></tr>
+<tr><td>Hoja de cálculo</td><td><span class="ph">{{URL_HOJA}}</span></td></tr>
+<tr><td>Código fuente</td><td>Editor de Apps Script del libro (archivos <code>00_Config.gs</code> a <code>06_Valores.gs</code>)</td></tr>
+<tr><td>Demostración interactiva</td><td><code>web/knn_demo.html</code></td></tr>
+<tr><td>Conjunto de datos (CSV)</td><td><code>datos/dataset_EJEMPLO_sintetico.csv</code> (formato de referencia)</td></tr>
+</tbody></table>
+</body>
+</html>
